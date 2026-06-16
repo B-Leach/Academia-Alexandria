@@ -1,7 +1,10 @@
 import { vi, type Mock, beforeAll, afterAll } from "vitest";
 
-// Set the test database URL before anything imports Prisma
+// Set the test database URL before anything imports Prisma.
+// Respect a value provided by the environment (e.g. CI), falling back to the
+// local default so `pnpm test:integration` works out of the box on a dev box.
 process.env.DATABASE_URL =
+  process.env.DATABASE_URL ??
   "postgresql://alexandria:alexandria@localhost:5432/alexandria_test?schema=public";
 
 // Mock next/cache — revalidatePath and revalidateTag are server-only
