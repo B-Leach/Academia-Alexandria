@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+.next/
+out/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Turbo
+.turbo/
+
+# Testing
+coverage/
+test-results/
+playwright-report/
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+vitest.config.ts
+vitest.integration.config.ts
+
+# Docker volumes
+docker/data/
+
+# Documentation
+*.md
+LICENSE
+!packages/database/prisma/migrations/**/*.sql
+
+# Scripts
+scripts/

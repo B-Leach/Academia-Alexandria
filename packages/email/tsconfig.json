@@ -1,0 +1,11 @@
+{
+  "extends": "@academia-alexandria/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022"
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}

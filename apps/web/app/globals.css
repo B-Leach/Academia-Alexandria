@@ -1,0 +1,148 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* ============================================================
+   LIGHT MODE — MONOCHROME (default)
+   ============================================================ */
+@theme {
+  --color-background: #ffffff;
+  --color-foreground: #0a0a0a;
+  --color-muted: #f5f5f5;
+  --color-muted-foreground: #636363;
+  --color-border: #e5e5e5;
+  --color-input: #e5e5e5;
+  --color-ring: #0a0a0a;
+  --color-primary: #0a0a0a;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f5f5f5;
+  --color-secondary-foreground: #0a0a0a;
+  --color-accent: #f5f5f5;
+  --color-accent-foreground: #0a0a0a;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-card: #ffffff;
+  --color-card-foreground: #0a0a0a;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0a0a0a;
+  --color-success: #22c55e;
+  --color-success-foreground: #ffffff;
+  --color-warning: #f59e0b;
+  --color-warning-foreground: #0a0a0a;
+  --color-info: #3b82f6;
+  --color-info-foreground: #ffffff;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+}
+
+/* ============================================================
+   DARK MODE — MONOCHROME
+   ============================================================ */
+.dark {
+  --color-background: #0a0a0a;
+  --color-foreground: #fafafa;
+  --color-muted: #262626;
+  --color-muted-foreground: #a3a3a3;
+  --color-border: #262626;
+  --color-input: #262626;
+  --color-ring: #d4d4d4;
+  --color-primary: #fafafa;
+  --color-primary-foreground: #0a0a0a;
+  --color-secondary: #262626;
+  --color-secondary-foreground: #fafafa;
+  --color-accent: #262626;
+  --color-accent-foreground: #fafafa;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #fafafa;
+  --color-card: #0a0a0a;
+  --color-card-foreground: #fafafa;
+  --color-popover: #0a0a0a;
+  --color-popover-foreground: #fafafa;
+  --color-success: #22c55e;
+  --color-success-foreground: #ffffff;
+  --color-warning: #f59e0b;
+  --color-warning-foreground: #0a0a0a;
+  --color-info: #60a5fa;
+  --color-info-foreground: #0a0a0a;
+}
+
+/* ============================================================
+   LIGHT MODE — COLOR
+   Deep indigo primary, warm accents, subtle tinted surfaces
+   ============================================================ */
+.theme-color {
+  --color-background: #faf9f7;
+  --color-foreground: #1a1625;
+  --color-muted: #f0eeeb;
+  --color-muted-foreground: #6b6580;
+  --color-border: #e2ddd5;
+  --color-input: #e2ddd5;
+  --color-ring: #5b4fc7;
+  --color-primary: #5b4fc7;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #ede9fe;
+  --color-secondary-foreground: #3b2f9e;
+  --color-accent: #fef3c7;
+  --color-accent-foreground: #92400e;
+  --color-destructive: #e11d48;
+  --color-destructive-foreground: #ffffff;
+  --color-card: #ffffff;
+  --color-card-foreground: #1a1625;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #1a1625;
+  --color-success: #059669;
+  --color-success-foreground: #ffffff;
+  --color-warning: #d97706;
+  --color-warning-foreground: #ffffff;
+  --color-info: #2563eb;
+  --color-info-foreground: #ffffff;
+}
+
+/* ============================================================
+   DARK MODE — COLOR
+   Rich purples, vibrant accents on dark surfaces
+   ============================================================ */
+.dark.theme-color {
+  --color-background: #110f1a;
+  --color-foreground: #ede9fe;
+  --color-muted: #1e1a2e;
+  --color-muted-foreground: #a5a0c0;
+  --color-border: #2d2745;
+  --color-input: #2d2745;
+  --color-ring: #8b7cf7;
+  --color-primary: #8b7cf7;
+  --color-primary-foreground: #110f1a;
+  --color-secondary: #241f3a;
+  --color-secondary-foreground: #c4b5fd;
+  --color-accent: #3b2f6e;
+  --color-accent-foreground: #fde68a;
+  --color-destructive: #f43f5e;
+  --color-destructive-foreground: #ffffff;
+  --color-card: #161225;
+  --color-card-foreground: #ede9fe;
+  --color-popover: #161225;
+  --color-popover-foreground: #ede9fe;
+  --color-success: #34d399;
+  --color-success-foreground: #0a0a0a;
+  --color-warning: #fbbf24;
+  --color-warning-foreground: #0a0a0a;
+  --color-info: #818cf8;
+  --color-info-foreground: #0a0a0a;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+}

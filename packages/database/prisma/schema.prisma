@@ -1,0 +1,643 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// AUTHENTICATION & USER MODELS
+// ============================================================
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String?
+
+  name            String
+  honorific       String?
+  bio             String?  @db.Text
+  institution     String?
+  rorId           String?
+  avatarUrl       String?
+  orcidId         String?  @unique
+  reputationScore Int      @default(0)
+  role            UserRole @default(USER)
+
+  bannedAt     DateTime?
+  bannedReason String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  researchAreas UserResearchArea[]
+  authoredPapers    PaperAuthor[]
+  comments          Comment[]
+  reviews           Review[]
+  endorsementsGiven Endorsement[]   @relation("endorser")
+  reputationEvents  ReputationEvent[]
+  retractedPapers   Paper[]         @relation("retractedPapers")
+  bountyPayouts     BountyPayout[]  @relation("bountyPayouts")
+  reports           Report[]        @relation("reports")
+  resolvedReports   Report[]        @relation("resolvedReports")
+
+  stripeConnectAccountId String?
+
+  sentInvitations     CoAuthorInvitation[] @relation("sentInvitations")
+  receivedInvitations CoAuthorInvitation[] @relation("receivedInvitations")
+  bookmarks           Bookmark[]
+
+  notifyReviews      Boolean @default(true)
+  notifyComments     Boolean @default(true)
+  notifyEndorsements Boolean @default(true)
+  notifyPaperStatus  Boolean @default(true)
+  notifyBounty       Boolean @default(true)
+  notifyInvitations  Boolean @default(true)
+  unsubscribeToken  String?  @map("unsubscribe_token")
+
+  lastNotificationReadAt DateTime?
+
+  auditLogs AuditLog[]
+  apiKeys   ApiKey[]
+  webhooks  Webhook[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================================
+// RESEARCH AREAS
+// ============================================================
+
+model ResearchArea {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  slug     String  @unique
+  parentId String?
+
+  parent   ResearchArea?  @relation("AreaHierarchy", fields: [parentId], references: [id])
+  children ResearchArea[] @relation("AreaHierarchy")
+  users    UserResearchArea[]
+  papers   PaperResearchArea[]
+
+  @@map("research_areas")
+}
+
+model UserResearchArea {
+  userId         String
+  researchAreaId String
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  researchArea ResearchArea @relation(fields: [researchAreaId], references: [id], onDelete: Cascade)
+
+  @@id([userId, researchAreaId])
+  @@map("user_research_areas")
+}
+
+// ============================================================
+// PAPERS
+// ============================================================
+
+enum PaperStatus {
+  DRAFT
+  SUBMITTED
+  PUBLISHED
+  RETRACTED
+}
+
+model Paper {
+  id       String      @id @default(cuid())
+  title    String
+  abstract String      @db.Text
+  content  String?     @db.Text
+  status   PaperStatus @default(DRAFT)
+
+  keywords    String[]
+  disciplines String[]
+  pdfUrl      String?
+  license          String?
+  funding              String?  @db.Text
+  dataAvailability     String?  @db.Text
+  competingInterests   String?  @db.Text
+  ethicsStatement      String?  @db.Text
+  doi               String? @unique
+  version           Int     @default(1)
+  isBlindSubmission Boolean @default(false)
+
+  acceptanceEligibleAt DateTime?
+  publishedAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  authors       PaperAuthor[]
+  researchAreas PaperResearchArea[]
+  versions      PaperVersion[]
+  comments      Comment[]
+  reviews       Review[]
+  endorsements  Endorsement[]
+  bounty              Bounty?
+  coAuthorInvitations CoAuthorInvitation[]
+  bookmarks           Bookmark[]
+
+  commentCount     Int @default(0)
+  reviewCount      Int @default(0)
+  endorsementCount Int @default(0)
+  viewCount        Int @default(0)
+  downloadCount    Int @default(0)
+
+  retractedAt     DateTime?
+  retractedReason String?   @db.Text
+  retractedBy     User?     @relation("retractedPapers", fields: [retractedById], references: [id])
+  retractedById   String?
+
+  // Similarity & plagiarism detection
+  similarityScore    Float?
+  similarityPaperId  String?
+  plagiarismCheckId  String?
+  plagiarismScore    Float?
+  plagiarismStatus   String?
+
+  /// Full-text search vector maintained by database trigger (not managed by Prisma)
+  search_vector Unsupported("tsvector")?
+
+  references Reference[] @relation("paperReferences")
+  citedBy    Reference[] @relation("citedByReferences")
+
+  @@index([status, publishedAt])
+  @@index([viewCount])
+  @@index([reviewCount])
+  @@index([endorsementCount])
+  @@index([commentCount])
+  @@map("papers")
+}
+
+model Reference {
+  id           String  @id @default(cuid())
+  paperId      String
+  paper        Paper   @relation("paperReferences", fields: [paperId], references: [id], onDelete: Cascade)
+  citedPaperId String?
+  citedPaper   Paper?  @relation("citedByReferences", fields: [citedPaperId], references: [id], onDelete: SetNull)
+  raw          String  @db.Text
+  title        String
+  authors      String
+  year         Int?
+  doi          String?
+  url          String?
+  journal      String?
+  sortOrder    Int     @default(0)
+
+  @@index([paperId])
+  @@index([citedPaperId])
+  @@map("references")
+}
+
+model PaperAuthor {
+  paperId         String
+  userId          String
+  order           Int      @default(0)
+  isCorresponding Boolean  @default(false)
+  contributions   String[] @default([])
+
+  paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([paperId, userId])
+  @@index([userId])
+  @@map("paper_authors")
+}
+
+model PaperResearchArea {
+  paperId        String
+  researchAreaId String
+
+  paper        Paper        @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  researchArea ResearchArea @relation(fields: [researchAreaId], references: [id], onDelete: Cascade)
+
+  @@id([paperId, researchAreaId])
+  @@map("paper_research_areas")
+}
+
+model PaperVersion {
+  id      String @id @default(cuid())
+  paperId String
+  version Int
+
+  title       String
+  abstract    String   @db.Text
+  content     String?  @db.Text
+  pdfUrl      String?
+  license              String?
+  funding              String?  @db.Text
+  dataAvailability     String?  @db.Text
+  competingInterests   String?  @db.Text
+  ethicsStatement      String?  @db.Text
+  keywords    String[]
+  disciplines String[]
+  authors     Json     @default("[]")
+
+  createdAt DateTime @default(now())
+
+  paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@unique([paperId, version])
+  @@map("paper_versions")
+}
+
+// ============================================================
+// COMMENTS (Tier 1)
+// ============================================================
+
+model Comment {
+  id           String @id @default(cuid())
+  content      String @db.Text
+  paperId      String
+  authorId     String
+  parentId     String?
+  paperVersion Int    @default(1)
+
+  paper   Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  author  User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  parent  Comment? @relation("CommentThread", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentThread")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  editedAt  DateTime?
+
+  @@index([paperId, createdAt])
+  @@index([authorId])
+  @@map("comments")
+}
+
+// ============================================================
+// FORMAL REVIEWS (Tier 2)
+// ============================================================
+
+enum ReviewRecommendation {
+  SOUND
+  NEEDS_REVISION
+  UNSOUND
+}
+
+model Review {
+  id String @id @default(cuid())
+
+  methodologyScore     Int
+  noveltyScore         Int
+  clarityScore         Int
+  reproducibilityScore Int
+  ethicsScore          Int
+
+  summary              String               @db.Text
+  strengthsText        String               @db.Text
+  weaknessesText       String               @db.Text
+  detailedComments     String               @db.Text
+  recommendation       ReviewRecommendation
+  confidenceLevel      Int
+  conflictOfInterest   String?              @db.Text
+
+  paperId    String
+  reviewerId String
+
+  paper    Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  reviewer User  @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  helpfulVotes Int @default(0)
+
+  isAnonymous    Boolean   @default(false)
+  isQualifying   Boolean   @default(false)
+
+  bountyPayoutId String?        @unique
+  bountyPayout   BountyPayout? @relation(fields: [bountyPayoutId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  editedAt  DateTime?
+
+  @@unique([paperId, reviewerId])
+  @@index([paperId, createdAt])
+  @@index([reviewerId])
+  @@map("reviews")
+}
+
+// ============================================================
+// ENDORSEMENTS (Tier 3)
+// ============================================================
+
+model Endorsement {
+  id        String  @id @default(cuid())
+  statement String? @db.Text
+  conflictOfInterest String? @db.Text
+
+  paperId    String
+  endorserId String
+
+  paper    Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  endorser User  @relation("endorser", fields: [endorserId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@unique([paperId, endorserId])
+  @@index([endorserId])
+  @@map("endorsements")
+}
+
+// ============================================================
+// BOUNTIES
+// ============================================================
+
+enum BountyStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+}
+
+model Bounty {
+  id      String @id @default(cuid())
+  paperId String @unique
+
+  paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  totalAmountCents  Int
+  reviewerPoolCents Int
+  platformFeeCents  Int
+  currency          String       @default("usd")
+  status            BountyStatus @default(ACTIVE)
+
+  stripePaymentIntentId String?
+  maxReviews            Int     @default(3)
+
+  payouts BountyPayout[]
+
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+
+  @@map("bounties")
+}
+
+model BountyPayout {
+  id       String @id @default(cuid())
+  bountyId String
+
+  bounty Bounty @relation(fields: [bountyId], references: [id], onDelete: Cascade)
+
+  review Review?
+
+  recipientUserId  String
+  recipient        User   @relation("bountyPayouts", fields: [recipientUserId], references: [id], onDelete: Restrict)
+  amountCents      Int
+  stripeTransferId String?
+  paidAt           DateTime?
+  createdAt        DateTime @default(now())
+
+  @@map("bounty_payouts")
+}
+
+// ============================================================
+// REPUTATION
+// ============================================================
+
+enum ReputationEventType {
+  PAPER_ACCEPTED
+  REVIEW_SUBMITTED
+  ENDORSEMENT_RECEIVED
+  ENDORSEMENT_GIVEN
+  BOUNTY_REVIEW_COMPLETED
+  PAPER_ENDORSED_BY_TRUSTED
+}
+
+model ReputationEvent {
+  id     String @id @default(cuid())
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  type   ReputationEventType
+  points Int
+
+  sourcePaperId  String?
+  sourceReviewId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("reputation_events")
+}
+
+// ============================================================
+// CO-AUTHOR INVITATIONS
+// ============================================================
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model CoAuthorInvitation {
+  id        String           @id @default(cuid())
+  paperId   String
+  inviterId String
+  inviteeId String
+  status    InvitationStatus @default(PENDING)
+  order     Int              @default(0)
+
+  createdAt   DateTime  @default(now())
+  respondedAt DateTime?
+
+  paper   Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  inviter User  @relation("sentInvitations", fields: [inviterId], references: [id], onDelete: Restrict)
+  invitee User  @relation("receivedInvitations", fields: [inviteeId], references: [id], onDelete: Restrict)
+
+  @@unique([paperId, inviteeId])
+  @@index([inviteeId, status])
+  @@map("co_author_invitations")
+}
+
+// ============================================================
+// REPORTS / MODERATION
+// ============================================================
+
+enum ReportTargetType {
+  COMMENT
+  REVIEW
+  PAPER
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+model Report {
+  id           String           @id @default(cuid())
+  reporterId   String
+  reporter     User             @relation("reports", fields: [reporterId], references: [id], onDelete: Restrict)
+  targetType   ReportTargetType
+  targetId     String
+  reason       String           @db.Text
+  status       ReportStatus     @default(PENDING)
+  resolvedAt   DateTime?
+  resolvedById String?
+  resolvedBy   User?            @relation("resolvedReports", fields: [resolvedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime         @default(now())
+
+  @@index([status])
+  @@index([targetType, targetId])
+  @@index([reporterId])
+  @@map("reports")
+}
+
+// ============================================================
+// BOOKMARKS
+// ============================================================
+
+model Bookmark {
+  userId  String
+  paperId String
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([userId, paperId])
+  @@index([userId, createdAt])
+  @@map("bookmarks")
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+
+enum AuditAction {
+  BAN_USER
+  UNBAN_USER
+  RETRACT_PAPER
+  DELETE_COMMENT
+  DELETE_REVIEW
+  APPROVE_PAPER
+  BLOCK_ACCEPTANCE
+  RESOLVE_REPORT
+  DISMISS_REPORT
+  ASSIGN_DOI
+}
+
+enum AuditTargetType {
+  USER
+  PAPER
+  COMMENT
+  REVIEW
+  REPORT
+}
+
+model AuditLog {
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  action     AuditAction
+  targetType AuditTargetType
+  targetId   String
+  metadata   Json?
+  createdAt  DateTime        @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================================
+// API KEYS
+// ============================================================
+
+enum ApiKeyTier {
+  FREE
+  BASIC
+  PREMIUM
+}
+
+model ApiKey {
+  id         String     @id @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyHash    String     @unique
+  keyPrefix  String
+  name       String
+  tier       ApiKeyTier @default(FREE)
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime   @default(now())
+
+  @@index([userId])
+  @@map("api_keys")
+}
+
+// ============================================================
+// WEBHOOKS
+// ============================================================
+
+model Webhook {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url       String
+  secret    String
+  events    String[]
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("webhooks")
+}

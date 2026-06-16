@@ -1,0 +1,76 @@
+# ---- Dependencies ----
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# ---- Next.js ----
+.next/
+**/.next/
+out/
+**/out/
+
+# ---- Build output ----
+dist/
+build/
+**/dist/
+**/build/
+*.tsbuildinfo
+
+# ---- Turborepo ----
+.turbo/
+**/.turbo/
+
+# ---- Environment / secrets ----
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# ---- Prisma generated client ----
+**/generated/
+**/.prisma/
+
+# ---- Testing / coverage ----
+coverage/
+**/coverage/
+test-results/
+playwright-report/
+
+# ---- Logs ----
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---- Uploaded media / runtime data / tmp ----
+uploads/
+**/uploads/
+media/
+tmp/
+**/tmp/
+docker/data/
+
+# ---- Editors / tooling ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---- AI assistant artifacts ----
+.claude/
+.cursor/
+.specstory/
+CLAUDE.md
+CLAUDE_MEMORY.md
+
+# ---- OS ----
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# ---- Stray / backup lockfiles ----
+pnpm-lock[[:space:]]*.yaml
