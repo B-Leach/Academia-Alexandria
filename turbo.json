@@ -19,7 +19,8 @@
       "cache": false
     },
     "test:integration": {
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["DATABASE_URL"]
     }
   }
 }
